@@ -90,14 +90,9 @@ int main()
 	}
 
 
-
-
 	closesocket(ListenSocket);
-
 
 	WSACleanup();
 
-
 	return 0;
-
 }
