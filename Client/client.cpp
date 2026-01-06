@@ -2,10 +2,13 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 
-#include <winsock2.h>
-#include <Windows.h>
+
 #include <process.h>
 #include <iostream>
+
+#include "Common.h"
+
+#pragma comment(lib, "Common.lib")
 
 
 #pragma comment(lib, "ws2_32")
@@ -19,32 +22,26 @@ unsigned RecvThread(void* Arg)
 {
 	SOCKET ServerSocket = *(SOCKET*)Arg;
 
+	flatbuffers::FlatBufferBuilder RecvBuilder;
+
 	char Buffer[1024] = { 0, };
 
-	while (true)
+
+	RecvPacket(ServerSocket, Buffer);
+
+	auto UserEvent = UserEvents::GetEventData(Buffer);
+	switch (UserEvent->data_type())
 	{
-		int PacketSize = 0;
-		int RecvBytes = recv(ServerSocket, (char*)&PacketSize, sizeof(PacketSize), MSG_WAITALL);
-
-		if (RecvBytes <= 0)
-		{
-			closesocket(ServerSocket);
-			break;
-		}
-
-		PacketSize = ntohl(PacketSize);
-
-		//실제 패킷 사이즈만큼 기다림
-		char Buffer[4096] = { 0, };
-		RecvBytes = recv(ServerSocket, Buffer, PacketSize, MSG_WAITALL);
-		if (RecvBytes <= 0)
-		{
-			closesocket(ServerSocket);
-			break;
-		}
-
-		cout << Buffer << endl;
+	case UserEvents::EventType_S2C_Login:
+		auto S2C_Login = UserEvent->data_as_S2C_Login();
+		cout << S2C_Login->player_id() << endl;
+		cout << S2C_Login->color()->r() << endl;
+		cout << S2C_Login->color()->g() << endl;
+		cout << S2C_Login->color()->b() << endl;
+		cout << S2C_Login->message() << endl;
+		break;
 	}
+
 	return 0;
 }
 
@@ -53,21 +50,19 @@ unsigned SendThread(void* Arg)
 	SOCKET ServerSocket = *(SOCKET*)Arg;
 
 
-	while (true)
-	{
-		char Buffer[1024] = { 0, };
+	char Buffer[1024] = { 0, };
+	flatbuffers::FlatBufferBuilder SendBuilder;
+	auto C2S_LoginData = UserEvents::CreateC2S_Login(SendBuilder,
+		SendBuilder.CreateString("Junios"),
+		SendBuilder.CreateString("1q2w3e4r"));
 
-		cout << "Chat : ";
-		cin.getline(Buffer, sizeof(Buffer));
+	auto EventData = UserEvents::CreateEventData(SendBuilder, 0, UserEvents::EventType_C2S_Login, C2S_LoginData.Union());
+
+	SendBuilder.Finish(EventData);
+
+	SendPacket(ServerSocket, SendBuilder);
 
 
-		int PacketSize = 0;
-		PacketSize = htonl(PacketSize);
-
-		int SendBytes = send(ServerSocket, (char*)&PacketSize, sizeof(PacketSize), 0);
-
-		//SendBytes = send(ServerSocket, JSONString.c_str(), Data.Length(), 0);
-	}
 	return 0;
 }
 
@@ -92,7 +87,7 @@ int main()
 	SOCKADDR_IN ServerSockAddr;
 	memset(&ServerSockAddr, 0, sizeof(ServerSockAddr));
 	ServerSockAddr.sin_family = AF_INET;
-	ServerSockAddr.sin_addr.s_addr = inet_addr("218.156.17.164");
+	ServerSockAddr.sin_addr.s_addr = inet_addr("192.168.0.100");
 	ServerSockAddr.sin_port = htons(30000);
 
 	int Result = connect(ServerSocket, (SOCKADDR*)&ServerSockAddr, sizeof(ServerSockAddr));

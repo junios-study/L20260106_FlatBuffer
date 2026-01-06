@@ -11,6 +11,8 @@
 
 using namespace std;
 
+void ProcessPakcet(SOCKET ClientSocket, const char* Buffer);
+
 string PrintAddress(SOCKET InSocket)
 {
 	SOCKADDR_IN GetSocketAddr;
@@ -86,6 +88,7 @@ int main()
 					int RecvBytes = RecvPacket(SelectSocket, Buffer);
 
 					//flatbuffer deserialize 하자.
+					ProcessPakcet(SelectSocket, Buffer);
 				}
 			}
 		}
@@ -97,4 +100,31 @@ int main()
 	WSACleanup();
 
 	return 0;
+}
+
+void ProcessPakcet(SOCKET ClientSocket, const char* Buffer)
+{
+	flatbuffers::FlatBufferBuilder SendBuilder;
+
+	auto RecvEventData = UserEvents::GetEventData(Buffer);
+	switch (RecvEventData->data_type())
+	{
+	case UserEvents::EventType_C2S_Login:
+		auto C2S_LoginData = RecvEventData->data_as_C2S_Login();
+		cout << "userid : " << C2S_LoginData->userid() << endl;
+		cout << "pasword : " << C2S_LoginData->password() << endl;
+
+		//DB와 통신후에 아이디 비번 확인후 결과 보내줌, 세션 관리
+		UserEvents::Color MyColor(128, 128, 128);
+		auto S2C_LoginData = UserEvents::CreateS2C_Login(SendBuilder, 100,
+			true, SendBuilder.CreateString("success"), 123, 345, &MyColor);
+
+		auto EventData = UserEvents::CreateEventData(SendBuilder, 0, UserEvents::EventType_S2C_Login, S2C_LoginData.Union());
+
+		SendBuilder.Finish(EventData);
+
+		SendPacket(ClientSocket, SendBuilder);
+		break;
+	}
+
 }

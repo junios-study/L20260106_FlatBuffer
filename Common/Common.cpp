@@ -21,7 +21,7 @@ RecvEnd:
 }
 
 
-inline int SendPacket(SOCKET Socket, const flatbuffers::FlatBufferBuilder& Builder)
+int SendPacket(SOCKET Socket, const flatbuffers::FlatBufferBuilder& Builder)
 {
 	int PacketSize = (int)Builder.GetSize();
 	PacketSize = htonl(PacketSize);
