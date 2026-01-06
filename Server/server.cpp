@@ -6,7 +6,7 @@
 #include <iostream>
 #include "Common.h"
 
-
+#pragma comment(lib, "Common.lib")
 
 
 using namespace std;
@@ -84,6 +84,8 @@ int main()
 				{
 					char Buffer[4096] = { 0, };
 					int RecvBytes = RecvPacket(SelectSocket, Buffer);
+
+					//flatbuffer deserialize гоюз.
 				}
 			}
 		}
