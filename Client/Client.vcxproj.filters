@@ -8,4 +8,9 @@
       <UniqueIdentifier>{924fa190-986a-47d3-866f-02210c23fcb9}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="client.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
 </Project>
