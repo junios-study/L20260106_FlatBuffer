@@ -37,12 +37,13 @@ int main()
 	SOCKADDR_IN ListenSockAddr;
 	memset(&ListenSockAddr, 0, sizeof(ListenSockAddr));
 	ListenSockAddr.sin_family = AF_INET;
-	ListenSockAddr.sin_addr.s_addr = inet_addr("192.168.0.100");
+	ListenSockAddr.sin_addr.s_addr = INADDR_ANY;
 	ListenSockAddr.sin_port = htons(30000);
 
-	bind(ListenSocket, (SOCKADDR*)&ListenSockAddr, sizeof(ListenSockAddr));
+	::bind(ListenSocket, (SOCKADDR*)&ListenSockAddr, sizeof(ListenSockAddr));
 
-	listen(ListenSocket, 5);
+
+	::listen(ListenSocket, 5);
 
 	fd_set ReadSocketList;
 	FD_ZERO(&ReadSocketList);
@@ -58,7 +59,7 @@ int main()
 	{
 		fd_set CopyReadSocketList = ReadSocketList;
 
-		int ChangeCount = select(0, &CopyReadSocketList, nullptr, nullptr, &Timeout);
+		int ChangeCount = ::select(0, &CopyReadSocketList, nullptr, nullptr, &Timeout);
 		if (ChangeCount == 0)
 		{
 			//cout << "Wait" << endl;
@@ -86,6 +87,14 @@ int main()
 				{
 					char Buffer[4096] = { 0, };
 					int RecvBytes = RecvPacket(SelectSocket, Buffer);
+					if (RecvBytes <= 0)
+					{
+						FD_CLR(SelectSocket, &ReadSocketList);
+						continue;
+					}
+
+					cout << RecvBytes << endl;
+
 
 					//flatbuffer deserialize 하자.
 					ProcessPakcet(SelectSocket, Buffer);
@@ -111,8 +120,8 @@ void ProcessPakcet(SOCKET ClientSocket, const char* Buffer)
 	{
 	case UserEvents::EventType_C2S_Login:
 		auto C2S_LoginData = RecvEventData->data_as_C2S_Login();
-		cout << "userid : " << C2S_LoginData->userid() << endl;
-		cout << "pasword : " << C2S_LoginData->password() << endl;
+		cout << "userid : " << C2S_LoginData->userid()->c_str() << endl;
+		cout << "pasword : " << C2S_LoginData->password()->c_str() << endl;
 
 		//DB와 통신후에 아이디 비번 확인후 결과 보내줌, 세션 관리
 		UserEvents::Color MyColor(128, 128, 128);

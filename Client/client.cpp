@@ -5,6 +5,7 @@
 
 #include <process.h>
 #include <iostream>
+#include <conio.h>
 
 #include "Common.h"
 
@@ -35,10 +36,8 @@ unsigned RecvThread(void* Arg)
 	case UserEvents::EventType_S2C_Login:
 		auto S2C_Login = UserEvent->data_as_S2C_Login();
 		cout << S2C_Login->player_id() << endl;
-		cout << S2C_Login->color()->r() << endl;
-		cout << S2C_Login->color()->g() << endl;
-		cout << S2C_Login->color()->b() << endl;
-		cout << S2C_Login->message() << endl;
+		cout << (int)S2C_Login->color()->r() << endl;
+		cout << S2C_Login->message()->c_str() << endl;
 		break;
 	}
 
@@ -47,10 +46,14 @@ unsigned RecvThread(void* Arg)
 
 unsigned SendThread(void* Arg)
 {
+	char Buffer[1024] = { 0, };
+
+	cout << "Start ";
+	_getch();
+
 	SOCKET ServerSocket = *(SOCKET*)Arg;
 
 
-	char Buffer[1024] = { 0, };
 	flatbuffers::FlatBufferBuilder SendBuilder;
 	auto C2S_LoginData = UserEvents::CreateC2S_Login(SendBuilder,
 		SendBuilder.CreateString("Junios"),
@@ -60,7 +63,8 @@ unsigned SendThread(void* Arg)
 
 	SendBuilder.Finish(EventData);
 
-	SendPacket(ServerSocket, SendBuilder);
+	int SentBytes = SendPacket(ServerSocket, SendBuilder);
+	cout << "Send : " << SentBytes << endl;
 
 
 	return 0;
@@ -76,11 +80,6 @@ int main()
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
 
 	char Buffer[1024] = { 0, };
-
-	cout << "Name : ";
-	cin.getline(Buffer, 1024);
-	UserName = Buffer;
-
 
 
 	SOCKET ServerSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
